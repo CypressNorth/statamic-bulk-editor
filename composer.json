@@ -1,6 +1,7 @@
 {
     "name": "cypressnorth/statamic-bulk-editor",
     "description": "Bulk Editor for Statamic collections by Cypress North",
+    "license": "proprietary",
     "autoload": {
         "psr-4": {
             "CypressNorth\\StatamicBulkEditor\\": "src"
