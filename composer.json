@@ -1,0 +1,38 @@
+{
+    "name": "cypressnorth/statamic-bulk-editor",
+    "description": "Bulk Editor for Statamic collections by Cypress North",
+    "autoload": {
+        "psr-4": {
+            "CypressNorth\\StatamicBulkEditor\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CypressNorth\\StatamicBulkEditor\\Tests\\": "tests"
+        }
+    },
+    "require": {
+        "statamic/cms": "^5.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "pixelfear/composer-dist-plugin": true
+        }
+    },
+    "extra": {
+        "statamic": {
+            "name": "Statamic Bulk Editor",
+            "description": "Bulk Editor for Statamic collections by Cypress North"
+        },
+        "laravel": {
+            "providers": [
+                "CypressNorth\\StatamicBulkEditor\\ServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
