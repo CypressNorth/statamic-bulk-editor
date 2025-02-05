@@ -23,10 +23,14 @@ class Blueprint
                         // all field handles for this collection's blueprints
                         ...EditInBulk::getAllAvailableFields(for: $collection->handle())
                             ->filter(function ($v) {
-                                if (!is_array($field = $v['field'])) {
-                                    return true;
+                                $field = $v['field'] ?? null;
+                                if (is_null($field)) {
+                                    return false;
                                 }
-                                return $field['type'] !== 'hidden';
+                                if (is_array($field)) {
+                                    return $field['type'] !== 'hidden';
+                                }
+                                return true;
                             })
                             ->pluck('handle')
                     ],

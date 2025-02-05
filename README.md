@@ -1,23 +1,20 @@
 # Statamic Bulk Editor
 
-> Statamic Bulk Editor is a Statamic addon that does something pretty neat.
+> Statamic Bulk Editor lets you edit several of your Statamic collection entries at once.
 
 ## Features
 
-This addon does:
-
-- This
-- And this
-- And even this
+- Quickly edit the same fields from your blueprints, but across several entries at once
+- Specify which fields can be edited on each collection
 
 ## How to Install
 
 You can install this addon via Composer:
 
-``` bash
+```bash
 composer require cypressnorth/statamic-bulk-editor
 ```
 
 ## How to Use
 
-Here's where you can explain how to use this wonderful addon.
+Go to Utilities -> Bulk Editor to specify which fields on each of your collections may be edited with the bulk editor.

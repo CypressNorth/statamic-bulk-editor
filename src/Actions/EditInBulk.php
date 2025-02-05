@@ -12,12 +12,30 @@ class EditInBulk extends Action
 {
     const string NO_VALUE_CHANGE = "cn_bulk_editor-no_value_change";
 
-    public static function getAllAvailableFields(string $for)
+    /**
+     * Each of these properties are set in unique ways.
+     * They won't be supported for now
+     */
+    const array UNSUPPORTED = [
+        'parent',
+        'slug',
+    ];
+
+    public static function getAllAvailableFields(string $for, bool $includingUnsupported = false)
     {
         $handle = $for;
-        return collect(StatamicCollection::findByHandle($handle)->entryBlueprints())
+        $fields = collect(StatamicCollection::findByHandle($handle)->entryBlueprints())
             ->map(fn($v) => $v->fields()->items())
             ->flatten(1);
+
+        if (! $includingUnsupported) {
+            $fields = $fields->filter(
+                fn($v) =>
+                !in_array($v['handle'] ?? null, static::UNSUPPORTED)
+            );
+        }
+
+        return $fields;
     }
 
     public function visibleTo($item)
@@ -65,6 +83,7 @@ class EditInBulk extends Action
         foreach ($items as $item) {
             /** @var Entry $item */
             foreach ($values as $key => $value) {
+                dump($key, $value, $item->get($key));
                 if ($value && $value !== static::NO_VALUE_CHANGE) {
                     $item->set($key, $value);
                 }
@@ -95,7 +114,7 @@ class EditInBulk extends Action
             ->map(fn($v) => $v->fields()->items())
             ->flatten(1)
             ->mapWithKeys(function ($value) {
-                $field = $value["field"];
+                $field = $value["field"] ?? null;
                 while (is_string($field)) {
                     /**
                      * Field is a Fieldset that should be loaded in
