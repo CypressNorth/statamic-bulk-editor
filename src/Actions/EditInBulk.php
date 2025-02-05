@@ -83,7 +83,6 @@ class EditInBulk extends Action
         foreach ($items as $item) {
             /** @var Entry $item */
             foreach ($values as $key => $value) {
-                dump($key, $value, $item->get($key));
                 if ($value && $value !== static::NO_VALUE_CHANGE) {
                     $item->set($key, $value);
                 }

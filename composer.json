@@ -26,7 +26,10 @@
     "extra": {
         "statamic": {
             "name": "Statamic Bulk Editor",
-            "description": "Bulk Editor for Statamic collections by Cypress North"
+            "description": "Bulk Editor for Statamic collections by Cypress North",
+            "editions": [
+                "pro"
+            ]
         },
         "laravel": {
             "providers": [
