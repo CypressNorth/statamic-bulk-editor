@@ -21,6 +21,23 @@ class EditInBulk extends Action
         'slug',
     ];
 
+    public function buttonText()
+    {
+        /** @translation */
+        return 'Bulk Edit|Bulk Edit :count Entries';
+    }
+
+    public function confirmationText()
+    {
+        /** @translation */
+        return 'Edit the fields you\'d like changed for these entries.';
+    }
+
+    public function warningText()
+    {
+        return "You're editing :count entries. This action cannot be undone by the Bulk Editor addon.";
+    }
+
     public static function getAllAvailableFields(string $for, bool $includingUnsupported = false)
     {
         $handle = $for;
@@ -94,20 +111,11 @@ class EditInBulk extends Action
 
     protected function fieldItems()
     {
-        $collection = StatamicCollection::findByHandle($collectionHandle = $this->context['collection']);
+        $collection = StatamicCollection::findByHandle($this->context['collection']);
         /** @var Collection $blueprints */
         $blueprints = collect($collection->entryBlueprints());
 
         $fields = [];
-
-        if ($blueprints->count() > 1) {
-            // $options = $blueprints->pluck('title'); // no longer supporting multiple blueprints
-            $fields['message'] = [
-                'type' => 'section',
-                'display' => 'Warning',
-                'instructions' => 'Collections with multiple blueprints are not supported, but you can edit the following fields at your own risk.',
-            ];
-        }
 
         $blueprintFields = $blueprints
             ->map(fn($v) => $v->fields()->items())
@@ -115,13 +123,7 @@ class EditInBulk extends Action
             ->mapWithKeys(function ($value) {
                 $field = $value["field"] ?? null;
                 while (is_string($field)) {
-                    /**
-                     * Field is a Fieldset that should be loaded in
-                     *
-                     * Technically we could just pass the string here,
-                     * but we might want to inject our own data (i.e. options)
-                     * into the fields later
-                     */
+                    // Field is a Fieldset that should be loaded in
                     $field = $this->convertStringFieldToFieldsetFields($field);
                 }
 
@@ -149,13 +151,13 @@ class EditInBulk extends Action
         return $fields;
     }
 
-    private function getFillable()
+    protected function getFillable()
     {
         $collection = StatamicCollection::find($this->context['collection']);
         return $collection ? $collection->cascade('cn_bulk_editor-editable_fields') : [];
     }
 
-    private function convertStringFieldToFieldsetFields(string $field_value)
+    protected function convertStringFieldToFieldsetFields(string $field_value)
     {
         $fieldsetParts = explode('.', $field_value, 2);
         $fieldsetHandle = $fieldsetParts[0];
