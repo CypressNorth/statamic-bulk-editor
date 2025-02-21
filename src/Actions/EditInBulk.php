@@ -2,6 +2,7 @@
 
 namespace CypressNorth\StatamicBulkEditor\Actions;
 
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Statamic\Actions\Action;
 use Statamic\Entries\Entry;
@@ -19,6 +20,7 @@ class EditInBulk extends Action
     const array UNSUPPORTED = [
         'parent',
         'slug',
+        'date',
     ];
 
     public function buttonText()
