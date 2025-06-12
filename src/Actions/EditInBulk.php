@@ -3,6 +3,7 @@
 namespace CypressNorth\StatamicBulkEditor\Actions;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Statamic\Actions\Action;
 use Statamic\Entries\Entry;
 use Statamic\Facades\Collection as StatamicCollection;
@@ -69,6 +70,13 @@ class EditInBulk extends Action
      */
     public function visibleToBulk($items)
     {
+        $collectionHandle = $this->context['collection'] ?? null;
+
+        if (is_null($collectionHandle)) {
+            // No support for bulk editing outside of collections
+            return false;
+        }
+
         /** @var Collection $items */
         $types = $items->reduce(function ($carry, $item, $index) {
             /** @var Entry $item */
@@ -76,8 +84,6 @@ class EditInBulk extends Action
             $carry['collections'][$item->collectionHandle()] = true;
             return $carry;
         }, ['blueprints' => [], 'collections' => []]);
-
-        $collectionHandle = $this->context['collection'];
 
         return count($types['collections']) === 1               // all matching collections
             && isset($types['collections'][$collectionHandle])  // all from this collection
