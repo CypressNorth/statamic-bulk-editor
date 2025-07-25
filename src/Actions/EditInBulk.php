@@ -3,10 +3,8 @@
 namespace CypressNorth\StatamicBulkEditor\Actions;
 
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Statamic\Actions\Action;
 use Statamic\Entries\Entry;
-use Statamic\Facades\Collection as StatamicCollection;
 use Statamic\Facades\Fieldset;
 
 class EditInBulk extends Action
@@ -21,6 +19,9 @@ class EditInBulk extends Action
         'parent',
         'slug', // controlled by the filename and should always be unique... probably shouldn't ever be supported
     ];
+
+    protected ?string $type;
+    protected ?string $facade = null;
 
     public function buttonText()
     {
@@ -39,12 +40,20 @@ class EditInBulk extends Action
         return "You're editing :count entries. This action cannot be undone by the Bulk Editor addon.";
     }
 
-    public static function getAllAvailableFields(string $for, bool $includingUnsupported = false)
+    public static function getAllAvailableFields(string $for, bool $includingUnsupported = false, string $containerType = 'collection')
     {
         $handle = $for;
-        $fields = collect(StatamicCollection::findByHandle($handle)->entryBlueprints())
-            ->map(fn($v) => $v->fields()->items())
-            ->flatten(1);
+
+        $facade = static::findFacade($containerType);
+
+        try {
+            $blueprintMethod = static::getBlueprintsMethodForContainerType($containerType);
+            $fields = collect($facade::findByHandle($handle)->{$blueprintMethod}())
+                ->map(fn($v) => $v->fields()->items())
+                ->flatten(1);
+        } catch (\Error) {
+            return collect();
+        }
 
         if (! $includingUnsupported) {
             $fields = $fields->filter(
@@ -70,10 +79,7 @@ class EditInBulk extends Action
      */
     public function visibleToBulk($items)
     {
-        $collectionHandle = $this->context['collection'] ?? null;
-
-        if (is_null($collectionHandle)) {
-            // No support for bulk editing outside of collections
+        if (is_null($this->type())) {
             return false;
         }
 
@@ -81,14 +87,18 @@ class EditInBulk extends Action
         $types = $items->reduce(function ($carry, $item, $index) {
             /** @var Entry $item */
             $carry['blueprints'][$item->blueprint()?->handle() ?: $index] = true;
-            $carry['collections'][$item->collectionHandle()] = true;
+            if (! method_exists($item, $handleMethod = $this->type() . "Handle")) {
+                $carry['collections'][null] = true;
+            } else {
+                $carry['collections'][$item->{$handleMethod}()] = true;
+            }
             return $carry;
         }, ['blueprints' => [], 'collections' => []]);
 
-        return count($types['collections']) === 1               // all matching collections
-            && isset($types['collections'][$collectionHandle])  // all from this collection
-            && ($this->getFillable())                           // Collection has fillable fields
-            && count($types['blueprints']) === 1;               // all matching blueprints
+        return count($types['collections']) === 1                           // all matching collections
+            && isset($types['collections'][$this->context[$this->type()]])    // all from this collection
+            && ($this->getFillable())                                       // Collection has fillable fields
+            && count($types['blueprints']) === 1;                           // all matching blueprints
     }
 
     /**
@@ -118,12 +128,22 @@ class EditInBulk extends Action
         }
     }
 
+    protected function facade()
+    {
+        return $this->facade ?? ($this->facade = static::findFacade($this->type()));
+    }
 
     protected function fieldItems()
     {
-        $collection = StatamicCollection::findByHandle($this->context['collection']);
-        /** @var Collection $blueprints */
-        $blueprints = collect($collection->entryBlueprints());
+        try {
+            $itemContainer = $this->facade()::findByHandle($this->context[$this->type()]);
+
+            $blueprintMethod = static::getBlueprintsMethodForContainerType($this->type());
+            /** @var Collection $blueprints */
+            $blueprints = collect($itemContainer->{$blueprintMethod}());
+        } catch (\Error) {
+            return [];
+        }
 
         $fields = [];
 
@@ -164,8 +184,17 @@ class EditInBulk extends Action
 
     protected function getFillable()
     {
-        $collection = StatamicCollection::find($this->context['collection']);
-        return $collection ? $collection->cascade('cn_bulk_editor-editable_fields') : [];
+        try {
+            $itemContainer = $this->facade()::find($this->context[$this->type()]);
+
+            if ($itemContainer) {
+                return $itemContainer->cascade('cn_bulk_editor-editable_fields');
+            }
+
+            return [];
+        } catch (\Error) {
+            return [];
+        }
     }
 
     protected function convertStringFieldToFieldsetFields(string $field_value)
@@ -184,5 +213,46 @@ class EditInBulk extends Action
 
         return $fieldsetFields
             ->first(fn($v) => ($v['handle'] ?? null) === $fieldHandle)['field'] ?? [];
+    }
+
+    protected function type(): ?string
+    {
+        return $this->type ?? ($this->type = $this->determineType());
+    }
+
+    protected function determineType(): ?string
+    {
+        if ($this->context['collection'] ?? null) {
+            return "collection";
+        }
+
+        if ($this->context['taxonomy'] ?? null) {
+            return "taxonomy";
+        }
+
+        return null;
+    }
+
+    public static function findFacade(?string $containerType): ?string
+    {
+        if (is_null($containerType)) {
+            return null;
+        }
+
+        $facade = "\\Statamic\\Facades\\" . ucfirst($containerType);
+
+        if (! class_exists($facade)) {
+            return null;
+        }
+
+        return $facade;
+    }
+
+    protected static function getBlueprintsMethodForContainerType(string $containerType): string
+    {
+        return match ($containerType) {
+            'taxonomy' => 'term',
+            default => 'entry',
+        } . "Blueprints";
     }
 }

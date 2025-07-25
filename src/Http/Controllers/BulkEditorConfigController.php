@@ -2,11 +2,10 @@
 
 namespace CypressNorth\StatamicBulkEditor\Http\Controllers;
 
-use CypressNorth\StatamicBulkEditor\Config\Blueprint as ConfigBlueprint;
+use CypressNorth\StatamicBulkEditor\Actions\EditInBulk;
+use CypressNorth\StatamicBulkEditor\Config;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Statamic\Facades;
 use Statamic\Fields\Blueprint as StatamicBlueprint;
 use Statamic\Http\Controllers\CP\CpController;
 
@@ -36,12 +35,38 @@ class BulkEditorConfigController extends CpController
 
         // Perform post-processing. This will convert values the Vue components
         // were using into values suitable for putting into storage.
-        $values = $fields->process()->values();
-        /** @var Collection $values */
+        $values = $fields
+            ->process()
+            ->values()
+            // Only grab editable field groups
+            ->where(fn($_, $k) => str_starts_with($k, "editable_"))
+            // Flatten editable field groups such that their fields are all at the top level
+            ->reduce(function (Collection $carry, $value) {
+                foreach ($value as $field => $value) {
+                    if (!is_array($value)) {
+                        // skip non-array values
+                        continue;
+                    }
 
-        // Do something with the values. Here we'll update the product model.
-        foreach ($values->get('editable', []) as $collection => $fields) {
-            $collection = Facades\Collection::findByHandle($collection);
+                    $carry->put($field, $value);
+                }
+
+                return $carry;
+            }, collect());
+
+        foreach ($values as $identifier => $fields) {
+            $parts = explode("_", $identifier, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+
+            [$containerType, $containerInstanceName] = $parts;
+
+            if (! $facade = EditInBulk::findFacade($containerType)) {
+                continue;
+            }
+
+            $collection = $facade::findByHandle($containerInstanceName);
             $collection->cascade()->put('cn_bulk_editor-editable_fields', $fields);
             $collection->save();
         }
@@ -51,8 +76,12 @@ class BulkEditorConfigController extends CpController
 
     protected function createBlueprint(): StatamicBlueprint
     {
-        return Facades\Blueprint::make()->setContents([
-            'fields' => Arr::get(ConfigBlueprint::getBlueprint()->contents(), 'tabs.main.sections.0.fields'),
+        return \Statamic\Facades\Blueprint::make()->setContents([
+            'tabs' => [
+                'main' => [
+                    'sections' => Config\BlueprintSection::prepareAllSections(),
+                ],
+            ],
         ]);
     }
 }

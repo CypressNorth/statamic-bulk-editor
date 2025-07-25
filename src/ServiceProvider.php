@@ -20,9 +20,6 @@ class ServiceProvider extends AddonServiceProvider
                 ->action([BulkEditorConfigController::class, 'index'])
                 ->routes(function ($router) {
                     $router->post('/', [BulkEditorConfigController::class, 'update'])->name('update');
-                    // $router->get('{import}', [ImportController::class, 'edit'])->name('edit');
-                    // $router->patch('{import}', [ImportController::class, 'update'])->name('update');
-                    // $router->delete('{import}', [ImportController::class, 'destroy'])->name('destroy');
                 });
         });
     }
