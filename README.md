@@ -23,3 +23,6 @@ Go to Utilities -> Bulk Editor to specify which fields on each of your collectio
 
 The Bulk Edit action will only appear if the entries you've selected use the same blueprint.
 - Prevents editing fields that have the same name but different purposes depending on the blueprint
+
+The Settings page exposes internal field names and is generally not fit for client use.
+- Consider restricting the Bulk Editor utilities page to Super Users, only
